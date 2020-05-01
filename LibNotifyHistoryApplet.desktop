@@ -1,0 +1,13 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Version=1.0
+Name=Notifications History Applet
+GenericName=Notifications History Applet
+Comment=Simple system tray agent will provide access to your notifications history
+Exec=LibNotifyHistoryApplet.py
+Icon=LibNotifyHistoryApplet
+Type=Application
+Terminal=false
+Categories=Utility;
+X-GNOME-AutoRestart=true
+X-MATE-AutoRestart=true
