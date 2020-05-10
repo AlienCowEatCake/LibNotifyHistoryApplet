@@ -10,6 +10,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 class LibNotifyHistoryApplet(QtCore.QObject):
     _icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), "LibNotifyHistoryApplet.svg")
+    _default_notifications_num = 10
 
     def __init__(self):
         super(LibNotifyHistoryApplet, self).__init__()
@@ -19,7 +20,14 @@ class LibNotifyHistoryApplet(QtCore.QObject):
         self._trayIcon.activated.connect(self._on_tray_icon_activated)
         self._trayMenu = QtWidgets.QMenu()
         self._trayIcon.setContextMenu(self._trayMenu)
-        self._trayMenu.addAction("Show Notifications History").triggered.connect(self._show_notifications_history)
+        self._trayMenu.addAction("Show Last {} Notifications".format(self._default_notifications_num)).triggered.connect(self._show_last_notifications)
+        self._trayMenu.addAction("Show All Notifications").triggered.connect(self._show_all_notifications)
+        self._trayMenu.addSeparator()
+        self._trayMenu.addAction("Replay Last {} Notifications".format(self._default_notifications_num)).triggered.connect(self._replay_last_notifications)
+        self._trayMenu.addAction("Replay All Notifications").triggered.connect(self._replay_all_notifications)
+        self._trayMenu.addSeparator()
+        self._trayMenu.addAction("Forget Last {} Notifications".format(self._default_notifications_num)).triggered.connect(self._forget_last_notifications)
+        self._trayMenu.addAction("Forget All Notifications").triggered.connect(self._forget_all_notifications)
         self._trayMenu.addSeparator()
         self._trayMenu.addAction("Exit").triggered.connect(QtWidgets.qApp.quit)
         self._notifications = []
@@ -45,12 +53,17 @@ class LibNotifyHistoryApplet(QtCore.QObject):
 
     def _on_tray_icon_activated(self, reason):
         if reason in [QtWidgets.QSystemTrayIcon.Trigger, QtWidgets.QSystemTrayIcon.DoubleClick, QtWidgets.QSystemTrayIcon.MiddleClick]:
-            self._show_notifications_history()
+            self._show_last_notifications()
 
-    def _show_notifications_history(self):
+    def _show_notifications_history(self, num):
         delimeter = "========================================\n"
         notifications_text = delimeter
+        counter = 0
         for notification in self._notifications:
+            if counter == num:
+                break
+            else:
+                counter += 1
             notification_text = ""
             summary = notification["summary"]
             body = notification["body"]
@@ -63,6 +76,39 @@ class LibNotifyHistoryApplet(QtCore.QObject):
             if notification_text:
                 notifications_text += "Time: " + notification["datetime"] + "\n" + notification_text + "\n" + delimeter
         self._show_notification(notifications_text)
+
+    def _show_all_notifications(self):
+        self._show_notifications_history(-1)
+
+    def _show_last_notifications(self):
+        self._show_notifications_history(self._default_notifications_num)
+
+    def _replay_notifications_history(self, num):
+        counter = 0
+        for notification in self._notifications:
+            if counter == num:
+                break
+            else:
+                counter += 1
+            QtCore.QProcess.startDetached("notify-send", [
+                "-i", str(notification["app_icon"]),
+                "-a", "LibNotifyHistoryApplet",
+                "-t", str(notification["expire_timeout"]),
+                notification["summary"],
+                notification["body"]
+            ])
+
+    def _replay_all_notifications(self):
+        self._replay_notifications_history(-1)
+
+    def _replay_last_notifications(self):
+        self._replay_notifications_history(self._default_notifications_num)
+
+    def _forget_all_notifications(self):
+        self._notifications = []
+
+    def _forget_last_notifications(self):
+        self._notifications = self._notifications[self._default_notifications_num:]
 
 
 def main():
