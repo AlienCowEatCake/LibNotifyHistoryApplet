@@ -1,3 +1,10 @@
+libnotify-history-applet (0.0.3-1) unstable; urgency=low
+
+  * Moved backend from memory to sqlite3 database
+  * Added default icon for replayed notifications
+
+ -- Peter Zhigalov <peter.zhigalov@gmail.com>  Fri, 17 Jul 2020 14:33:49 +0700
+
 libnotify-history-applet (0.0.2-1) unstable; urgency=low
 
   * Added default limit for displayed notifications count

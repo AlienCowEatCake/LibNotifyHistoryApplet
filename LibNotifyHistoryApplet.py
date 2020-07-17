@@ -3,6 +3,7 @@
 import datetime
 import dbus
 import os
+import sqlite3
 import sys
 from dbus.mainloop.glib import DBusGMainLoop
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -30,7 +31,22 @@ class LibNotifyHistoryApplet(QtCore.QObject):
         self._trayMenu.addAction("Forget All Notifications").triggered.connect(self._forget_all_notifications)
         self._trayMenu.addSeparator()
         self._trayMenu.addAction("Exit").triggered.connect(QtWidgets.qApp.quit)
-        self._notifications = []
+        dbpath = os.path.join(os.getenv('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), "LibNotifyHistoryApplet", "notifications.db")
+        os.makedirs(os.path.dirname(dbpath), mode=0o700, exist_ok=True)
+        self._notifications_db = sqlite3.connect(dbpath)
+        QtWidgets.qApp.aboutToQuit.connect(self._notifications_db.close)
+        self._notifications_db.execute('''
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id integer primary key AUTOINCREMENT,
+                    time_stamp text,
+                    app_name text,
+                    app_icon text,
+                    summary text,
+                    body text,
+                    expire_timeout text
+                    );
+                ''')
+        self._notifications_db.commit()
 
     def show(self):
         while not self._trayIcon.geometry().isValid():
@@ -39,7 +55,18 @@ class LibNotifyHistoryApplet(QtCore.QObject):
 
     def appendNotification(self, notification):
         if notification["app_name"] != "LibNotifyHistoryApplet":
-            self._notifications.insert(0, notification)
+            self._notifications_db.execute('''
+                    INSERT INTO notifications(time_stamp, app_name, app_icon, summary, body, expire_timeout)
+                        VALUES (?, ?, ?, ?, ?, ?);
+                    ''', (
+                str(notification["datetime"]),
+                str(notification["app_name"]),
+                str(notification["app_icon"]),
+                str(notification["summary"]),
+                str(notification["body"]),
+                str(notification["expire_timeout"]),
+            ))
+            self._notifications_db.commit()
 
     def _show_notification(self, text):
         if not QtCore.QProcess.startDetached("notify-send", [
@@ -58,15 +85,15 @@ class LibNotifyHistoryApplet(QtCore.QObject):
     def _show_notifications_history(self, num):
         delimeter = "========================================\n"
         notifications_text = delimeter
-        counter = 0
-        for notification in self._notifications:
-            if counter == num:
-                break
-            else:
-                counter += 1
+        for row in self._notifications_db.execute('''
+                SELECT * FROM (
+                    SELECT id, summary, body, time_stamp FROM notifications ORDER BY id DESC limit {}
+                    ) ORDER BY id ASC;
+                '''.format(num)):
+            summary = row[1]
+            body = row[2]
+            datetime = row[3]
             notification_text = ""
-            summary = notification["summary"]
-            body = notification["body"]
             if summary and body:
                 notification_text = summary + "\n" + body
             elif summary:
@@ -74,7 +101,7 @@ class LibNotifyHistoryApplet(QtCore.QObject):
             elif body:
                 notification_text = body
             if notification_text:
-                notifications_text += "Time: " + notification["datetime"] + "\n" + notification_text + "\n" + delimeter
+                notifications_text += "Time: " + datetime + "\n" + notification_text + "\n" + delimeter
         self._show_notification(notifications_text)
 
     def _show_all_notifications(self):
@@ -84,18 +111,23 @@ class LibNotifyHistoryApplet(QtCore.QObject):
         self._show_notifications_history(self._default_notifications_num)
 
     def _replay_notifications_history(self, num):
-        counter = 0
-        for notification in self._notifications:
-            if counter == num:
-                break
-            else:
-                counter += 1
+        for row in self._notifications_db.execute('''
+                SELECT * FROM (
+                    SELECT id, app_icon, expire_timeout, summary, body FROM notifications ORDER BY id DESC limit {}
+                    ) ORDER BY id ASC;
+                '''.format(num)):
+            app_icon = row[1]
+            expire_timeout = row[2]
+            summary = row[3]
+            body = row[4]
+            if not app_icon:
+                app_icon = self._icon
             QtCore.QProcess.startDetached("notify-send", [
-                "-i", str(notification["app_icon"]),
+                "-i", app_icon,
                 "-a", "LibNotifyHistoryApplet",
-                "-t", str(notification["expire_timeout"]),
-                notification["summary"],
-                notification["body"]
+                "-t", expire_timeout,
+                summary,
+                body
             ])
 
     def _replay_all_notifications(self):
@@ -105,10 +137,18 @@ class LibNotifyHistoryApplet(QtCore.QObject):
         self._replay_notifications_history(self._default_notifications_num)
 
     def _forget_all_notifications(self):
-        self._notifications = []
+        self._notifications_db.execute('''
+            DELETE FROM notifications;
+            ''')
+        self._notifications_db.commit()
 
     def _forget_last_notifications(self):
-        self._notifications = self._notifications[self._default_notifications_num:]
+        self._notifications_db.execute('''
+            DELETE FROM notifications WHERE id IN (
+                SELECT id FROM notifications ORDER BY id DESC limit {}
+                )
+            '''.format(self._default_notifications_num))
+        self._notifications_db.commit()
 
 
 def main():
