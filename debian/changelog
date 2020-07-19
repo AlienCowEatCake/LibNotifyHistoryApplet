@@ -1,3 +1,9 @@
+libnotify-history-applet (0.0.4-1) unstable; urgency=low
+
+  * Fixed notifications order
+
+ -- Peter Zhigalov <peter.zhigalov@gmail.com>  Sun, 19 Jul 2020 15:37:30 +0700
+
 libnotify-history-applet (0.0.3-1) unstable; urgency=low
 
   * Moved backend from memory to sqlite3 database

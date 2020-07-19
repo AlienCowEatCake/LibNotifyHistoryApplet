@@ -86,9 +86,7 @@ class LibNotifyHistoryApplet(QtCore.QObject):
         delimeter = "========================================\n"
         notifications_text = delimeter
         for row in self._notifications_db.execute('''
-                SELECT * FROM (
-                    SELECT id, summary, body, time_stamp FROM notifications ORDER BY id DESC limit {}
-                    ) ORDER BY id ASC;
+                SELECT id, summary, body, time_stamp FROM notifications ORDER BY id DESC limit {};
                 '''.format(num)):
             summary = row[1]
             body = row[2]
@@ -112,9 +110,7 @@ class LibNotifyHistoryApplet(QtCore.QObject):
 
     def _replay_notifications_history(self, num):
         for row in self._notifications_db.execute('''
-                SELECT * FROM (
-                    SELECT id, app_icon, expire_timeout, summary, body FROM notifications ORDER BY id DESC limit {}
-                    ) ORDER BY id ASC;
+                SELECT id, app_icon, expire_timeout, summary, body FROM notifications ORDER BY id DESC limit {};
                 '''.format(num)):
             app_icon = row[1]
             expire_timeout = row[2]
