@@ -22,7 +22,7 @@ binary-arch: build
 	dh_prep
 	dh_installdirs
 	cp -a LibNotifyHistoryApplet.py LibNotifyHistoryApplet.svg LibNotifyHistoryApplet.desktop debian/libnotify-history-applet/opt/LibNotifyHistoryApplet/
-	ln -s /opt/LibNotifyHistoryApplet/LibNotifyHistoryApplet.desktop debian/libnotify-history-applet/etc/xdg/autostart/ru.codefreak.fami.LibNotifyHistoryApplet.desktop
+	ln -s /opt/LibNotifyHistoryApplet/LibNotifyHistoryApplet.desktop debian/libnotify-history-applet/etc/xdg/autostart/com.github.aliencoweatcake.libnotifyhistoryapplet.desktop
 	sed -i 's|^Exec=LibNotifyHistoryApplet.py|Exec=/opt/LibNotifyHistoryApplet/LibNotifyHistoryApplet.py|' debian/libnotify-history-applet/opt/LibNotifyHistoryApplet/LibNotifyHistoryApplet.desktop
 	sed -i 's|^Icon=LibNotifyHistoryApplet|Icon=/opt/LibNotifyHistoryApplet/LibNotifyHistoryApplet.svg|' debian/libnotify-history-applet/opt/LibNotifyHistoryApplet/LibNotifyHistoryApplet.desktop
 	dh_fixperms
