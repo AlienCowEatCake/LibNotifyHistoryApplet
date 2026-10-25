@@ -1,3 +1,9 @@
+libnotify-history-applet (0.0.6-1) unstable; urgency=low
+
+  * Port to PyQt6
+
+ -- Peter Zhigalov <peter.zhigalov@gmail.com>  Mon, 26 Oct 2026 04:42:36 +0700
+
 libnotify-history-applet (0.0.5-1) unstable; urgency=low
 
   * Change application identifier

@@ -6,7 +6,7 @@ import os
 import sqlite3
 import sys
 from dbus.mainloop.glib import DBusGMainLoop
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore, QtGui, QtWidgets
 
 
 class LibNotifyHistoryApplet(QtCore.QObject):
@@ -16,7 +16,7 @@ class LibNotifyHistoryApplet(QtCore.QObject):
     def __init__(self):
         super(LibNotifyHistoryApplet, self).__init__()
         self._trayIcon = QtWidgets.QSystemTrayIcon()
-        QtWidgets.qApp.aboutToQuit.connect(self._trayIcon.hide)
+        QtWidgets.QApplication.instance().aboutToQuit.connect(self._trayIcon.hide)
         self._trayIcon.setIcon(QtGui.QIcon(self._icon))
         self._trayIcon.activated.connect(self._on_tray_icon_activated)
         self._trayMenu = QtWidgets.QMenu()
@@ -30,11 +30,11 @@ class LibNotifyHistoryApplet(QtCore.QObject):
         self._trayMenu.addAction("Forget Last {} Notifications".format(self._default_notifications_num)).triggered.connect(self._forget_last_notifications)
         self._trayMenu.addAction("Forget All Notifications").triggered.connect(self._forget_all_notifications)
         self._trayMenu.addSeparator()
-        self._trayMenu.addAction("Exit").triggered.connect(QtWidgets.qApp.quit)
+        self._trayMenu.addAction("Exit").triggered.connect(QtWidgets.QApplication.instance().quit)
         dbpath = os.path.join(os.getenv('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), "LibNotifyHistoryApplet", "notifications.db")
         os.makedirs(os.path.dirname(dbpath), mode=0o700, exist_ok=True)
         self._notifications_db = sqlite3.connect(dbpath)
-        QtWidgets.qApp.aboutToQuit.connect(self._notifications_db.close)
+        QtWidgets.QApplication.instance().aboutToQuit.connect(self._notifications_db.close)
         self._notifications_db.execute('''
                 CREATE TABLE IF NOT EXISTS notifications (
                     id integer primary key AUTOINCREMENT,
@@ -69,17 +69,18 @@ class LibNotifyHistoryApplet(QtCore.QObject):
             self._notifications_db.commit()
 
     def _show_notification(self, text):
-        if not QtCore.QProcess.startDetached("notify-send", [
+        success, pid = QtCore.QProcess.startDetached("notify-send", [
             "-u", "critical",
             "-i", self._icon,
             "-a", "LibNotifyHistoryApplet",
             "Notifications History",
             text
-        ]):
+        ])
+        if not success:
             self._trayIcon.showMessage("Notifications History", text, self._trayIcon.icon())
 
     def _on_tray_icon_activated(self, reason):
-        if reason in [QtWidgets.QSystemTrayIcon.Trigger, QtWidgets.QSystemTrayIcon.DoubleClick, QtWidgets.QSystemTrayIcon.MiddleClick]:
+        if reason in [QtWidgets.QSystemTrayIcon.ActivationReason.Trigger, QtWidgets.QSystemTrayIcon.ActivationReason.DoubleClick, QtWidgets.QSystemTrayIcon.ActivationReason.MiddleClick]:
             self._show_last_notifications()
 
     def _show_notifications_history(self, num):
@@ -167,7 +168,7 @@ def main():
     bus.add_match_string_non_blocking("eavesdrop=true, interface='org.freedesktop.Notifications', member='Notify'")
     bus.add_message_filter(handle_notifications)
 
-    return app.exec_()
+    return app.exec()
 
 
 if __name__ == '__main__':
